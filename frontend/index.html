@@ -1,0 +1,89 @@
+<!doctype html>
+th,td{border:1px solid #ccc;padding:8px}
+th{background:#f0f0f0}
+input,textarea{width:100%;box-sizing:border-box}
+.row{display:flex;gap:10px}
+.col{flex:1}
+</style>
+</head>
+<body>
+<h1>Entities CRUD</h1>
+
+
+<section>
+<h2>Dodaj / Edytuj encję</h2>
+<form id="form">
+<input type="hidden" id="id">
+<div><label>Title<br><input id="title"></label></div>
+<div><label>Description<br><textarea id="description" rows="3"></textarea></label></div>
+<div><label>Amount<br><input id="amount" type="number" step="0.01"></label></div>
+<div style="margin-top:8px">
+<button type="submit">Zapisz</button>
+<button type="button" id="cancel">Anuluj</button>
+</div>
+</form>
+</section>
+
+
+<section>
+<h2>Lista</h2>
+<div id="list"></div>
+</section>
+
+
+<script>
+const API_BASE = (location.hostname === 'localhost') ? 'http://localhost:3001/api/entities' : '/api/entities';
+
+
+async function fetchList() {
+const res = await fetch(API_BASE);
+const data = await res.json();
+renderList(data);
+}
+
+
+function renderList(items) {
+if (!items.length) { document.getElementById('list').innerHTML = '<p>Brak rekordów.</p>'; return; }
+let html = '<table><tr><th>ID</th><th>Title</th><th>Description</th><th>Amount</th><th>Created</th><th>Actions</th></tr>';
+items.forEach(it => {
+html += `<tr>
+<td>${it.id}</td>
+<td>${escapeHtml(it.title)}</td>
+<td>${escapeHtml(it.description||'')}</td>
+<td>${it.amount}</td>
+<td>${it.created_at}</td>
+<td>
+<button data-id="${it.id}" class="edit">Edytuj</button>
+<button data-id="${it.id}" class="del">Usuń</button>
+</td>
+</tr>`;
+});
+html += '</table>';
+document.getElementById('list').innerHTML = html;
+
+
+document.querySelectorAll('.edit').forEach(b => b.addEventListener('click', onEdit));
+document.querySelectorAll('.del').forEach(b => b.addEventListener('click', onDelete));
+}
+
+
+function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+
+async function onEdit(e){
+const id = e.target.dataset.id;
+const res = await fetch(API_BASE + '/' + id);
+if (res.status === 404) return alert('Nie znaleziono');
+const data = await res.json();
+document.getElementById('id').value = data.id;
+document.getElementById('title').value = data.title;
+document.getElementById('description').value = data.description || '';
+document.getElementById('amount').value = data.amount;
+window.scrollTo(0,0);
+}
+
+
+async function onDelete(e){
+if (!confirm('Usunąć rekord?')) return;
+const id = e.target.dataset.id;
+const res = await fetch(API_BASE + '/' + id, { method: 'DELETE' });
